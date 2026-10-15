@@ -15,8 +15,15 @@ const server = http.createServer((req, res) => {
     return res.end('turbo-ok');
   }
   if (p === '/' || p === '/index.html') {
-    return fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
-      if (err) { res.writeHead(500); return res.end('index.html introuvable'); }
+    // Tolère un nom un peu différent (ex. "index (1).html") et indique les fichiers vus si rien n'est trouvé.
+    let ls = []; try { ls = fs.readdirSync(__dirname); } catch (e) {}
+    const name = ls.includes('index.html') ? 'index.html' : ls.find(n => /index.*\.html?(\.txt)?$/i.test(n));
+    if (!name) {
+      res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+      return res.end('index.html introuvable.\nDossier du serveur : ' + __dirname + '\nFichiers présents : ' + (ls.join(', ') || '(aucun)'));
+    }
+    return fs.readFile(path.join(__dirname, name), (err, data) => {
+      if (err) { res.writeHead(500); return res.end('index.html illisible'); }
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
       res.end(data);
     });
